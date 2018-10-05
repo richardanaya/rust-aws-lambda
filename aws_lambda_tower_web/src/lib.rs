@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<T, C, M, M> ServiceBuilderExt for ServiceBuilder<T, C, M, M>
+impl<T, C, M, N> ServiceBuilderExt for ServiceBuilder<T, C, M, N>
 where
     T: IntoResource<DefaultSerializer, RequestBody>,
     T::Resource: Send + 'static,
@@ -70,8 +70,16 @@ where
     M::Error: Fail,
     M::ResponseBody: Send,
     M::Service: Send,
+    N: HttpMiddleware<RoutedService<T::Resource, C::Catch>, RequestBody = ::RequestBody>
+        + Send
+        + 'static,
+    N::Error: Fail,
+    N::ResponseBody: Send,
+    N::Service: Send,
     <M::Service as HttpService>::Future: Send,
     <M::ResponseBody as BufStream>::Error: Fail,
+    <N::Service as HttpService>::Future: Send,
+    <N::ResponseBody as BufStream>::Error: Fail,
 {
     fn run_lambda(self) -> Result<(), io::Error> {
         let new_service = NewServiceWrapper {
