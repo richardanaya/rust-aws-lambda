@@ -57,37 +57,3 @@ where
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
     }
 }
-
-impl<T, C, M, N> ServiceBuilderExt for ServiceBuilder<T, C, M, N>
-where
-    T: IntoResource<DefaultSerializer, RequestBody>,
-    T::Resource: Send + 'static,
-    C: IntoCatch<DefaultSerializer>,
-    C::Catch: Send + 'static,
-    M: HttpMiddleware<RoutedService<T::Resource, C::Catch>, RequestBody = ::RequestBody>
-        + Send
-        + 'static,
-    M::Error: Fail,
-    M::ResponseBody: Send,
-    M::Service: Send,
-    N: HttpMiddleware<RoutedService<T::Resource, C::Catch>, RequestBody = ::RequestBody>
-        + Send
-        + 'static,
-    N::Error: Fail,
-    N::ResponseBody: Send,
-    N::Service: Send,
-    <M::Service as HttpService>::Future: Send,
-    <M::ResponseBody as BufStream>::Error: Fail,
-    <N::Service as HttpService>::Future: Send,
-    <N::ResponseBody as BufStream>::Error: Fail,
-{
-    fn run_lambda(self) -> Result<(), io::Error> {
-        let new_service = NewServiceWrapper {
-            inner: self.build_new_service(),
-        };
-        let new_proxy = NewApiGatewayProxy::new(new_service);
-        Runtime::new()
-            .and_then(|runtime| runtime.start_service(new_proxy))
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))
-    }
-}
